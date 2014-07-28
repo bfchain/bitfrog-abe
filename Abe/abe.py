@@ -441,7 +441,7 @@ class Abe:
                    b.block_nBits, b.block_value_out,
                    b.block_total_seconds, b.block_satoshi_seconds,
                    b.block_total_satoshis, b.block_ss_destroyed,
-                   b.block_total_ss
+                   b.block_total_ss, b.block_chain_work
               FROM block b
               JOIN chain_candidate cc ON (b.block_id = cc.block_id)
              WHERE cc.chain_id = ?
@@ -484,7 +484,10 @@ class Abe:
         body += ['<p>', nav, '</p>\n',
                  '<table><tr><th>Block</th><th>Approx. Time</th>',
                  '<th>Transactions</th><th>Value Out</th>',
-                 '<th>Difficulty</th><th>Outstanding</th>',
+                 #Bitfrog: Replace difficulty by cumulative difficulty
+                 #'<th>Difficulty</th>',
+                 '<th>Cumulative Difficulty</th>',
+                 '<th>Outstanding</th>',
                  '<th>Average Age</th><th>Chain Age</th>',
                  '<th>% ',
                  '<a href="https://en.bitcoin.it/wiki/Bitcoin_Days_Destroyed">',
@@ -495,7 +498,7 @@ class Abe:
                  '</tr>\n']
         for row in rows:
             (hash, height, nTime, num_tx, nBits, value_out,
-             seconds, ss, satoshis, destroyed, total_ss) = row
+             seconds, ss, satoshis, destroyed, total_ss, chain_work) = row
             nTime = int(nTime)
             value_out = int(value_out)
             seconds = int(seconds)
@@ -520,7 +523,11 @@ class Abe:
                 '</td><td>', format_time(int(nTime)),
                 '</td><td>', num_tx,
                 '</td><td>', format_satoshis(value_out, chain),
-                '</td><td>', util.calculate_difficulty(int(nBits)),
+                #Bitfrog: Replace difficulty by cumulative difficulty
+                #'</td><td>', util.calculate_difficulty(int(nBits)),
+                '</td><td>', 
+                util.work_to_difficulty(abe.store.binout_int(chain_work)) 
+                if chain_work is not None else '',
                 '</td><td>', format_satoshis(satoshis, chain),
                 '</td><td>', avg_age,
                 '</td><td>', '%5g' % (seconds / 86400.0),
@@ -587,8 +594,9 @@ class Abe:
             'Version: ', b['version'], '<br />\n',
             'Transaction Merkle Root: ', b['hashMerkleRoot'], '<br />\n',
             'Time: ', b['nTime'], ' (', format_time(b['nTime']), ')<br />\n',
-            'Difficulty: ', format_difficulty(util.calculate_difficulty(b['nBits'])),
-            ' (Bits: %x)' % (b['nBits'],), '<br />\n',
+            #Bitfrog: hide difficulty in block
+            #'Difficulty: ', format_difficulty(util.calculate_difficulty(b['nBits'])),
+            #' (Bits: %x)' % (b['nBits'],), '<br />\n',
 
             ['Cumulative Difficulty: ', format_difficulty(
                     util.work_to_difficulty(b['chain_work'])), '<br />\n']
